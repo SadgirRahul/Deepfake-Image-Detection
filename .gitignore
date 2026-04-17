@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+ENV/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project artifacts
+results/
+
+# Data / training assets (keep out of git)
+Dataset/
+
+# Model weights (large binaries)
+models/*.pth
+models/*.pt
+models/*.onnx
+
+# Node / Vite
+**/node_modules/
+**/dist/
+
+# Logs
+*.log
