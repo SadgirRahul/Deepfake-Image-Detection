@@ -51,11 +51,11 @@ def main() -> None:
     if not image_path or not os.path.exists(image_path):
         raise FileNotFoundError('Image path not provided or file does not exist')
 
-    _ensure_cvcp_on_path()
+    cvcp_root = _ensure_cvcp_on_path()
 
     from src.predict import DeepfakePredictor
 
-    model_path = os.getenv('MODEL_PATH') or 'f:/CV_CP/models/best_model.pth'
+    model_path = os.getenv('MODEL_PATH') or os.path.join(cvcp_root, 'models', 'best_model.pth')
     model_path = os.path.abspath(model_path)
     if not os.path.exists(model_path):
         raise FileNotFoundError(

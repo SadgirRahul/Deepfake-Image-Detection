@@ -22,6 +22,15 @@ function runPredictScript(imagePath) {
     const processArgs = [env.PYTHON_SCRIPT, imagePath];
     const pythonProcess = spawn(env.PYTHON_EXECUTABLE, processArgs, {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        // Reduce BLAS thread usage to avoid memory allocation failures on constrained hosts.
+        OPENBLAS_NUM_THREADS: '1',
+        OMP_NUM_THREADS: '1',
+        MKL_NUM_THREADS: '1',
+        NUMEXPR_NUM_THREADS: '1',
+        VECLIB_MAXIMUM_THREADS: '1',
+      },
     });
 
     let stdoutData = '';

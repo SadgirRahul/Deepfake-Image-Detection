@@ -37,6 +37,9 @@ export function useAnalyzeImage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
+  const apiBaseUrl = (import.meta.env?.VITE_API_BASE_URL || '').toString().replace(/\/$/, '');
+  const analyzeUrl = apiBaseUrl ? `${apiBaseUrl}/api/analyze` : '/api/analyze';
+
   const analyze = useCallback(async (file) => {
     if (!file) {
       setError('Please select an image first.');
@@ -50,7 +53,7 @@ export function useAnalyzeImage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('http://localhost:5000/api/analyze', {
+      const response = await fetch(analyzeUrl, {
         method: 'POST',
         body: formData,
       });

@@ -11,9 +11,34 @@ import { errorHandler } from './middleware/errorHandler.js';
 const app = express();
 const env = loadEnv();
 
-app.use(cors({
-  origin: env.CLIENT_URL,
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const allowedExact = new Set([env.CLIENT_URL]);
+
+    if (allowedExact.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    if (env.NODE_ENV === 'development') {
+      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        callback(null, true);
+        return;
+      }
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
+};
+
+app.use(cors({
+  ...corsOptions,
 }));
 app.use(helmet());
 app.use(morgan('dev'));
