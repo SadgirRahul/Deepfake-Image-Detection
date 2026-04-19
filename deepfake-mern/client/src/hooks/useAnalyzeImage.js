@@ -66,7 +66,7 @@ export function useAnalyzeImage() {
 
       const label = String(payload?.label || 'UNKNOWN').toUpperCase();
       const confidence = normalizePercent(payload?.confidence);
-      const inferenceTime = Number(payload?.inference_time ?? payload?.inferenceTime ?? 0);
+      const inferenceTime = Number(payload?.inference_time_ms ?? payload?.inferenceTime ?? 0);
 
       const realPct = payload?.real_pct != null
         ? normalizePercent(payload.real_pct)
@@ -86,10 +86,10 @@ export function useAnalyzeImage() {
         inferenceTime: Number.isFinite(inferenceTime) ? inferenceTime : 0,
         real_pct: realPct,
         fake_pct: fakePct,
-        ela: normalizeImageOutput(payload?.ela),
-        fft: normalizeImageOutput(payload?.fft),
-        edges: normalizeImageOutput(payload?.edges),
-        gradcam: normalizeImageOutput(payload?.gradcam),
+        ela: normalizeImageOutput(payload?.visualizations?.ela),
+        fft: normalizeImageOutput(payload?.visualizations?.fft),
+        edges: normalizeImageOutput(payload?.visualizations?.edges),
+        gradcam: normalizeImageOutput(payload?.visualizations?.gradcam),
       };
 
       setResult(normalizedResult);

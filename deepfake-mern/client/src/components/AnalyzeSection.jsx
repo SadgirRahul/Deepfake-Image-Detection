@@ -1,25 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import AccuracyConfidencePanel from './AccuracyConfidencePanel';
+import ConfidenceReliability from './ConfidenceReliability';
 
-import { useAnalysis } from '../context/analysisContext';
-import FeatureAnalysis from './FeatureAnalysis';
-
-function AnalyzeSection() {
+function AnalyzeSection({
+  uploadedImage,
+  loading,
+  result,
+  error,
+  onImageSelected,
+  onAnalyze,
+  onReset,
+  modelMetrics,
+  metricsLoading,
+  setActiveTab,
+}) {
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [inputMode, setInputMode] = useState('upload');
   const [cameraError, setCameraError] = useState('');
-  const {
-    imageFile,
-    previewUrl,
-    selectFile,
-    analyzeSelected,
-    loading,
-    result,
-    error,
-    clearAll,
-  } = useAnalysis();
+  const [displayedRealPct, setDisplayedRealPct] = useState(0);
+  const [displayedFakePct, setDisplayedFakePct] = useState(0);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  useEffect(() => {
+    if (!result?.label) {
+      setDisplayedRealPct(0);
+      setDisplayedFakePct(0);
+      return;
+    }
+
+    setDisplayedRealPct(0);
+    setDisplayedFakePct(0);
+
+    const nextReal = result?.real_pct ?? 0;
+    const nextFake = result?.fake_pct ?? 0;
+
+    const timeoutId = setTimeout(() => {
+      setDisplayedRealPct(nextReal);
+      setDisplayedFakePct(nextFake);
+    }, 80);
+
+    return () => clearTimeout(timeoutId);
+  }, [result]);
+
+  useEffect(() => {
+    if (!uploadedImage) {
+      setSelectedFile(null);
+    }
+  }, [uploadedImage]);
 
   const stopCamera = useCallback(() => {
     const stream = streamRef.current;
@@ -81,25 +111,41 @@ function AnalyzeSection() {
     };
   }, [inputMode, stopCamera]);
 
+  const handleFileSelection = (file) => {
+    if (!file || !file.type?.startsWith('image/')) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedFile(file);
+      onImageSelected(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const onDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
     const droppedFile = event.dataTransfer.files?.[0];
-    selectFile(droppedFile);
+    handleFileSelection(droppedFile);
   };
 
-  const onAnalyze = async () => {
-    if (!imageFile) {
+  const handleAnalyzeClick = async () => {
+    if (!selectedFile) {
       return;
     }
 
-    await analyzeSelected();
+    await onAnalyze(selectedFile);
   };
 
-  const onReset = () => {
-    clearAll();
+  const handleReset = () => {
+    onReset();
     setCameraError('');
     setIsDragging(false);
+    setDisplayedRealPct(0);
+    setDisplayedFakePct(0);
+    setSelectedFile(null);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -110,7 +156,7 @@ function AnalyzeSection() {
   const realPct = result?.real_pct ?? 0;
   const fakePct = result?.fake_pct ?? 0;
   const confidence = result?.confidence ?? 0;
-  const inferenceTime = Number(result?.inferenceTime ?? 0).toFixed(1);
+  const inferenceTime = Number(result?.inference_time_ms ?? 0).toFixed(1);
 
   const onSelectUpload = () => {
     stopCamera();
@@ -119,9 +165,13 @@ function AnalyzeSection() {
   };
 
   const onSelectCamera = () => {
-    clearAll();
+    handleReset();
     setCameraError('');
     setInputMode('camera');
+  };
+
+  const onDownloadReport = () => {
+    // Placeholder until report export is implemented.
   };
 
   const onCapture = async () => {
@@ -158,36 +208,38 @@ function AnalyzeSection() {
       type: blob.type || 'image/jpeg',
     });
 
-    selectFile(capturedFile);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    setSelectedFile(capturedFile);
+    onImageSelected(dataUrl);
     onSelectUpload();
   };
 
   return (
     <>
-      <section className="mx-auto grid w-full max-w-6xl gap-6 p-4 lg:grid-cols-2">
+      <section className="mx-auto grid w-full max-w-6xl gap-6 bg-[#0f172a] p-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-700/60 bg-slate-900/80 p-5 shadow-xl">
-          <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-700/60 bg-slate-950/40 p-1">
+          <div className="mb-4 flex items-center rounded-full border border-slate-700/60 bg-slate-950/60 p-1">
             <button
               type="button"
               onClick={onSelectUpload}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                 inputMode === 'upload'
-                  ? 'bg-slate-800 text-slate-100'
-                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'text-slate-300 hover:text-slate-100'
               }`}
             >
-              Upload image
+              Upload Image
             </button>
             <button
               type="button"
               onClick={onSelectCamera}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                 inputMode === 'camera'
-                  ? 'bg-slate-800 text-slate-100'
-                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'text-slate-300 hover:text-slate-100'
               }`}
             >
-              Use webcam
+              Use Webcam
             </button>
           </div>
 
@@ -212,27 +264,24 @@ function AnalyzeSection() {
                 isDragging ? 'border-blue-400 bg-slate-800/60' : 'border-slate-600 hover:border-blue-500/70'
               }`}
             >
-              {!previewUrl ? (
-                <div className="flex flex-col items-center gap-3 text-center">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-blue-400">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      className="h-6 w-6"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 16V4" />
-                      <path d="m7 9 5-5 5 5" />
-                      <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" />
-                    </svg>
-                  </span>
-                  <p className="text-sm font-medium text-slate-200">Drop image here or click to browse</p>
-                </div>
+              {!uploadedImage ? (
+                <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-blue-400">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className="h-7 w-7"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 16V4" />
+                    <path d="m7 9 5-5 5 5" />
+                    <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" />
+                  </svg>
+                </span>
               ) : (
                 <img
-                  src={previewUrl}
+                  src={uploadedImage}
                   alt="Selected preview"
                   className="max-h-[300px] w-full rounded-xl bg-slate-950 object-contain"
                 />
@@ -259,7 +308,7 @@ function AnalyzeSection() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(event) => selectFile(event.target.files?.[0])}
+            onChange={(event) => handleFileSelection(event.target.files?.[0])}
           />
 
           {inputMode === 'camera' && (
@@ -275,8 +324,8 @@ function AnalyzeSection() {
 
           <button
             type="button"
-            onClick={onAnalyze}
-            disabled={!imageFile || loading}
+            onClick={handleAnalyzeClick}
+            disabled={!selectedFile || loading}
             className="mt-4 w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Analyze Image
@@ -284,9 +333,9 @@ function AnalyzeSection() {
 
           <button
             type="button"
-            onClick={onReset}
-            disabled={loading || (!imageFile && !result && !error)}
-            className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-800/50 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={handleReset}
+            disabled={loading || (!uploadedImage && !result?.label && !error)}
+            className="mt-3 w-full rounded-xl border border-slate-700 bg-transparent px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-800/70 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Reset
           </button>
@@ -306,54 +355,96 @@ function AnalyzeSection() {
         </div>
 
         <div className="rounded-2xl border border-slate-700/60 bg-slate-900/80 p-5 shadow-xl">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-            <p className="text-center text-5xl font-extrabold tracking-wide text-white">{predictionLabel}</p>
+          {!result?.label ? (
+            <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center text-sm text-slate-300">
+              Upload an image to begin
+            </div>
+          ) : (
+            <div className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p
+                className={`text-center text-5xl font-extrabold tracking-wide ${
+                  predictionLabel.toLowerCase() === 'real' ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {predictionLabel}
+              </p>
 
-            <div className="mt-8 space-y-5">
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-slate-200">Real</span>
-                  <span className="text-slate-300">{realPct}%</span>
+              <div className="flex justify-center">
+                <ConfidenceReliability
+                  confidence={confidence}
+                  modelAccuracy={modelMetrics?.overall_accuracy}
+                  metricsLoading={metricsLoading}
+                />
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="text-slate-200">Real</span>
+                    <span className="text-slate-300">{realPct}%</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-slate-800">
+                    <div
+                      className="h-3 rounded-full bg-emerald-500 transition-all duration-700"
+                      style={{ width: `${displayedRealPct}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-3 rounded-full bg-slate-800">
-                  <div
-                    className="h-3 rounded-full bg-emerald-500 transition-all duration-700"
-                    style={{ width: `${realPct}%` }}
-                  />
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="text-slate-200">Fake</span>
+                    <span className="text-slate-300">{fakePct}%</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-slate-800">
+                    <div
+                      className="h-3 rounded-full bg-rose-500 transition-all duration-700"
+                      style={{ width: `${displayedFakePct}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-slate-200">Fake</span>
-                  <span className="text-slate-300">{fakePct}%</span>
-                </div>
-                <div className="h-3 rounded-full bg-slate-800">
-                  <div
-                    className="h-3 rounded-full bg-rose-500 transition-all duration-700"
-                    style={{ width: `${fakePct}%` }}
-                  />
-                </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3 text-sm font-medium text-slate-100">
+                Confidence: <span className="text-emerald-300">{confidence}%</span>
+                <span className="mx-2 text-slate-500">|</span>
+                Inference: <span className="text-cyan-300">{inferenceTime} ms</span>
+              </div>
+
+                <AccuracyConfidencePanel
+                  confidence={confidence}
+                  label={predictionLabel}
+                  modelMetrics={modelMetrics}
+                  metricsLoading={metricsLoading}
+                />
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('report')}
+                  className="w-full rounded-xl bg-blue-500/20 px-3 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/30"
+                >
+                  View Analysis Report
+                </button>
+                <button
+                  type="button"
+                  onClick={onDownloadReport}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                >
+                  Download Report
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                >
+                  Reset
+                </button>
               </div>
             </div>
-          </div>
-
-          <div className="mt-5 rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3">
-            <p className="text-sm font-medium text-slate-100">
-              Confidence: <span className="text-blue-300">{confidence}%</span>
-              <span className="mx-2 text-slate-500">|</span>
-              Inference: <span className="text-cyan-300">{inferenceTime} ms</span>
-            </p>
-          </div>
+          )}
         </div>
       </section>
-
-      <FeatureAnalysis
-        elaImage={result?.ela}
-        fftImage={result?.fft}
-        edgeImage={result?.edges}
-        gradcamImage={result?.gradcam}
-      />
     </>
   );
 }

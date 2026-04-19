@@ -9,3 +9,43 @@
 body {
   @apply bg-slate-950 text-slate-100 antialiased;
 }
+
+@keyframes scanMove {
+  0% {
+    transform: translateY(-8px);
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(8px);
+    opacity: 0.4;
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.4;
+  }
+}
+
+.scan-line {
+  animation: scanMove 2s ease-in-out infinite;
+}
+
+.pulse-dot {
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+.brand-text {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { readFile } from 'fs/promises';
+import path from 'path';
 
 import { loadEnv } from './config/env.js';
 import detectionRoutes from './routes/detection.routes.js';
@@ -47,6 +49,18 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api/model-metrics', async (req, res, next) => {
+  try {
+    const metricsPath = path.join(process.cwd(), 'server', 'data', 'model_metrics.json');
+    const raw = await readFile(metricsPath, 'utf-8');
+    const payload = JSON.parse(raw);
+    res.status(200).json(payload);
+  } catch (err) {
+    err.statusCode = err.statusCode || 500;
+    next(err);
+  }
 });
 
 app.use('/api', detectionRoutes);

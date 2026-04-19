@@ -1,0 +1,15 @@
+{
+  "overall_accuracy": 93.2,
+  "real_accuracy": 94.1,
+  "fake_accuracy": 92.3,
+  "precision": 91.8,
+  "recall": 93.5,
+  "f1_score": 92.6,
+  "auc_roc": 97.4,
+  "total_images_trained": 10000,
+  "test_images": 2000,
+  "model_name": "EfficientNet-B0 + ELA",
+  "training_epochs": 25,
+  "phase1_epochs": 8,
+  "phase2_epochs": 17
+}

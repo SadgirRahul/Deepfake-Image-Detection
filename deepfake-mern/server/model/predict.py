@@ -13,26 +13,25 @@ def _suppress_stdout():
     return contextlib.redirect_stdout(io.StringIO())
 
 
-def _to_base64_png(rgb_image: np.ndarray) -> str:
-    if rgb_image is None:
+def _to_base64_png(image: np.ndarray) -> str:
+    if image is None:
         return ''
 
-    image = np.asarray(rgb_image)
+    normalized = np.asarray(image)
 
-    if image.ndim == 2:
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-    elif image.ndim == 3 and image.shape[2] == 4:
-        image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+    if normalized.ndim == 2:
+        normalized = cv2.cvtColor(normalized, cv2.COLOR_GRAY2BGR)
+    elif normalized.ndim == 3 and normalized.shape[2] == 4:
+        normalized = cv2.cvtColor(normalized, cv2.COLOR_RGBA2BGR)
 
-    if image.dtype != np.uint8:
-        image = np.clip(image, 0, 255).astype(np.uint8)
+    if normalized.dtype != np.uint8:
+        normalized = np.clip(normalized, 0, 255).astype(np.uint8)
 
-    bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    ok, buffer = cv2.imencode('.png', bgr)
+    ok, buffer = cv2.imencode('.png', normalized)
     if not ok:
         return ''
 
-    return base64.b64encode(buffer).decode('ascii')
+    return base64.b64encode(buffer).decode('utf-8')
 
 
 def _ensure_cvcp_on_path() -> str:
@@ -91,17 +90,21 @@ def main() -> None:
     fake_pct = prob * 100.0
     real_pct = (1.0 - prob) * 100.0
 
+    label = str(prediction.get('label', 'UNKNOWN')).upper()
+
     response = {
-        'label': prediction.get('label', 'UNKNOWN'),
+        'label': label,
         # DeepfakePredictor returns confidence in percent already (0-100)
-        'confidence': prediction.get('confidence', 0),
-        'inference_time': prediction.get('inference_time_ms', 0),
+        'confidence': float(prediction.get('confidence', 0)),
         'real_pct': round(real_pct, 2),
         'fake_pct': round(fake_pct, 2),
-        'ela': _to_base64_png(features.get('ela')),
-        'fft': _to_base64_png(features.get('fft')),
-        'edges': _to_base64_png(features.get('edges')),
-        'gradcam': _to_base64_png(gradcam),
+        'inference_time_ms': float(prediction.get('inference_time_ms', 0)),
+        'visualizations': {
+            'ela': _to_base64_png(features.get('ela')),
+            'fft': _to_base64_png(features.get('fft')),
+            'edges': _to_base64_png(features.get('edges')),
+            'gradcam': _to_base64_png(gradcam),
+        },
     }
 
     # IMPORTANT: stdout must be JSON only (Express parses this).
