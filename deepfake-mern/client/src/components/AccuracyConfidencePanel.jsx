@@ -39,7 +39,7 @@ function AccuracyConfidencePanel({ confidence, label, modelMetrics, metricsLoadi
   return (
     <section className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-xl">
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center text-center">
           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
             Prediction Confidence
           </h3>
@@ -79,13 +79,12 @@ function AccuracyConfidencePanel({ confidence, label, modelMetrics, metricsLoadi
               </>
             )}
           </div>
-          <p className="mt-4 text-center text-sm text-slate-200">
+          <p className="mt-4 text-sm text-slate-200">
             This image is {normalizedConfidence}% likely to be {isFake ? 'FAKE' : 'REAL'}.
           </p>
         </div>
 
         <div>
-          <h3 className="text-base font-semibold text-slate-100">How accurate is this model?</h3>
           {metricsLoading ? (
             <div className="mt-4 space-y-4">
               {rows.map((row) => (
@@ -117,12 +116,7 @@ function AccuracyConfidencePanel({ confidence, label, modelMetrics, metricsLoadi
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="mt-4 text-sm italic text-slate-400">Model metrics unavailable</p>
-          )}
-          <p className="mt-4 text-xs text-slate-400">
-            Model trained on 10,000 images • EfficientNet-B0 + ELA
-          </p>
+          ) : null}
         </div>
       </div>
     </section>

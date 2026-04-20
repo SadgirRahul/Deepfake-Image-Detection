@@ -43,11 +43,6 @@ from tqdm import tqdm
 from src.dataset import get_dataloaders
 from src.model import get_model
 
-
-# =============================================================================
-# 1. Run inference on the test set
-# =============================================================================
-
 def evaluate_model(model, test_loader, device):
     """
     Evaluate the model on the test set.
@@ -85,7 +80,6 @@ def evaluate_model(model, test_loader, device):
         "roc_auc": roc_auc_score(y_true, y_prob),
     }
 
-    # Print metrics
     print("\n" + "=" * 50)
     print("📊 TEST SET EVALUATION RESULTS")
     print("=" * 50)
@@ -102,11 +96,6 @@ def evaluate_model(model, test_loader, device):
         "y_pred": y_pred,
         "y_prob": y_prob,
     }
-
-
-# =============================================================================
-# 2. Confusion Matrix
-# =============================================================================
 
 def plot_confusion_matrix(y_true, y_pred, save_path="f:/CV_CP/results/confusion_matrix.png"):
     """
@@ -131,7 +120,6 @@ def plot_confusion_matrix(y_true, y_pred, save_path="f:/CV_CP/results/confusion_
     ax.set_ylabel("True Label", fontsize=13)
     ax.set_title("Confusion Matrix", fontsize=15, fontweight="bold")
 
-    # Add percentage annotations
     total = cm.sum()
     for i in range(2):
         for j in range(2):
@@ -146,11 +134,6 @@ def plot_confusion_matrix(y_true, y_pred, save_path="f:/CV_CP/results/confusion_
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"✅ Confusion matrix saved to: {save_path}")
-
-
-# =============================================================================
-# 3. ROC Curve
-# =============================================================================
 
 def plot_roc_curve(y_true, y_prob, save_path="f:/CV_CP/results/roc_curve.png"):
     """
@@ -176,11 +159,6 @@ def plot_roc_curve(y_true, y_prob, save_path="f:/CV_CP/results/roc_curve.png"):
     plt.close()
     print(f"✅ ROC curve saved to: {save_path}")
 
-
-# =============================================================================
-# 4. Precision-Recall Curve
-# =============================================================================
-
 def plot_precision_recall_curve(y_true, y_prob, save_path="f:/CV_CP/results/pr_curve.png"):
     """
     Plot and save the precision-recall curve.
@@ -202,11 +180,6 @@ def plot_precision_recall_curve(y_true, y_prob, save_path="f:/CV_CP/results/pr_c
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"✅ Precision-Recall curve saved to: {save_path}")
-
-
-# =============================================================================
-# 5. Grad-CAM
-# =============================================================================
 
 def generate_gradcam(model, image_tensor, device):
     """
@@ -230,16 +203,15 @@ def generate_gradcam(model, image_tensor, device):
         print("⚠ pytorch-grad-cam not installed. Skipping Grad-CAM.")
         return None
 
-    # Target: last block of the EfficientNet backbone
     target_layer = model.backbone[-1]
 
     cam = GradCAM(model=model, target_layers=[target_layer])
 
     input_tensor = image_tensor.unsqueeze(0).to(device)
-    targets = [BinaryClassifierOutputTarget(1)]  # class "Fake"
+    targets = [BinaryClassifierOutputTarget(1)]
 
     grayscale_cam = cam(input_tensor=input_tensor, targets=targets)
-    return grayscale_cam[0]  # (H, W) float in [0, 1]
+    return grayscale_cam[0]
 
 
 def visualize_gradcam_samples(
@@ -263,7 +235,6 @@ def visualize_gradcam_samples(
     os.makedirs(save_dir, exist_ok=True)
     model.eval()
 
-    # Collect some samples with their predictions
     samples = []
     with torch.no_grad():
         for images, labels in test_loader:
@@ -285,7 +256,6 @@ def visualize_gradcam_samples(
             if len(samples) >= n_samples * 4:
                 break
 
-    # Pick a mix of correct and incorrect
     correct = [s for s in samples if s["correct"]]
     incorrect = [s for s in samples if not s["correct"]]
     selected = incorrect[:n_samples // 2] + correct[:n_samples // 2]
@@ -303,13 +273,11 @@ def visualize_gradcam_samples(
         img_tensor = sample["tensor"]
         heatmap = generate_gradcam(model, img_tensor, device)
 
-        # De-normalize RGB channels for display (first 3 channels)
         rgb = img_tensor[:3].permute(1, 2, 0).numpy()
         mean = np.array([0.485, 0.456, 0.406])
         std = np.array([0.229, 0.224, 0.225])
         rgb = (rgb * std + mean).clip(0, 1).astype(np.float32)
 
-        # Original image
         axes[0, i].imshow(rgb)
         true_label = "FAKE" if sample["label"] == 1 else "REAL"
         pred_label = "FAKE" if sample["pred"] == 1 else "REAL"
@@ -320,7 +288,6 @@ def visualize_gradcam_samples(
         )
         axes[0, i].axis("off")
 
-        # Grad-CAM overlay
         if heatmap is not None:
             cam_image = show_cam_on_image(rgb, heatmap, use_rgb=True)
             axes[1, i].imshow(cam_image)
@@ -329,7 +296,6 @@ def visualize_gradcam_samples(
         axes[1, i].set_title("Grad-CAM", fontsize=10)
         axes[1, i].axis("off")
 
-        # Save individual
         if heatmap is not None:
             cam_img = show_cam_on_image(rgb, heatmap, use_rgb=True)
             cv2.imwrite(
@@ -342,11 +308,6 @@ def visualize_gradcam_samples(
     plt.savefig(os.path.join(save_dir, "gradcam_grid.png"), dpi=150, bbox_inches="tight")
     plt.close()
     print(f"✅ Grad-CAM samples saved to: {save_dir}")
-
-
-# =============================================================================
-# 6. Misclassified samples
-# =============================================================================
 
 def show_misclassified(
     model,
@@ -413,7 +374,6 @@ def show_misclassified(
         )
         axes[r, c].axis("off")
 
-    # Hide unused axes
     for i in range(len(misclassified), rows * cols):
         r, c = divmod(i, cols)
         axes[r, c].axis("off")
@@ -423,11 +383,6 @@ def show_misclassified(
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"✅ Misclassified samples saved to: {save_path}")
-
-
-# =============================================================================
-# CLI entry point
-# =============================================================================
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate Deepfake Detector")
@@ -445,13 +400,11 @@ if __name__ == "__main__":
     print("📊 DEEPFAKE DETECTION — EVALUATION")
     print("=" * 50)
 
-    # Load model
     model = get_model(use_ela=use_ela, pretrained=False, device=device)
     model.load_state_dict(torch.load(args.model_path, map_location=device))
     model.eval()
     print(f"✅ Model loaded from: {args.model_path}")
 
-    # Load test data
     loaders = get_dataloaders(
         root_dir=args.data_dir,
         batch_size=args.batch_size,
@@ -460,10 +413,8 @@ if __name__ == "__main__":
     )
     test_loader = loaders["test"]
 
-    # Run evaluation
     results = evaluate_model(model, test_loader, device)
 
-    # Generate visualizations
     plot_confusion_matrix(results["y_true"], results["y_pred"])
     plot_roc_curve(results["y_true"], results["y_prob"])
     plot_precision_recall_curve(results["y_true"], results["y_prob"])
